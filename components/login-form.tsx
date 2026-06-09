@@ -33,7 +33,8 @@ export function LoginForm({
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email: `${username}@physiofitness.com`,
+        // email: `${username}@physiofitness.com`,
+        email: username,
         password,
       });
       if (error) throw error;

@@ -1,43 +1,66 @@
-import { redirect } from "next/navigation";
+"use client"
+import { useState } from "react";
+import axios, { AxiosError } from "axios";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
-import { createClient } from "@/lib/supabase/server";
-import { InfoIcon } from "lucide-react";
-import { FetchDataSteps } from "@/components/tutorial/fetch-data-steps";
-import { Suspense } from "react";
-
-async function UserDetails() {
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getClaims();
-
-  if (error || !data?.claims) {
-    redirect("/auth/login");
-  }
-
-  return JSON.stringify(data.claims, null, 2);
+interface ApiResponse {
+  message: string;
 }
 
-export default function ProtectedPage() {
+export default function UsernameForm() {
+  const [username, setUsername] = useState<string>("");
+  const [response, setResponse] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const handleSubmit = async (
+    e: React.FormEvent<HTMLFormElement>
+  ): Promise<void> => {
+    e.preventDefault();
+
+    try {
+      setLoading(true);
+
+      const res = await axios.post<ApiResponse>(
+        "http://localhost:5173/api/admin/createUser",
+        {
+          username,
+        }
+      );
+
+      setResponse(res.data.message);
+    } catch (error) {
+      const err = error as AxiosError<ApiResponse>;
+
+      setResponse(
+        err.response?.data?.message || "Something went wrong"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="flex-1 w-full flex flex-col gap-12">
-      <div className="w-full">
-        <div className="bg-accent text-sm p-3 px-5 rounded-md text-foreground flex gap-3 items-center">
-          <InfoIcon size="16" strokeWidth={2} />
-          This is a protected page that you can only see as an authenticated
-          user
+    <div className="max-w-md mx-auto p-6 border rounded-lg space-y-4">
+      <h2 className="text-xl font-semibold">Username Form</h2>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Input
+          placeholder="Enter username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+        />
+
+        <Button type="submit" disabled={loading}>
+          {loading ? "Loading..." : "Submit"}
+        </Button>
+      </form>
+
+      {response && (
+        <div className="rounded-md border p-3">
+          {response}
         </div>
-      </div>
-      <div className="flex flex-col gap-2 items-start">
-        <h2 className="font-bold text-2xl mb-4">Your user details</h2>
-        <pre className="text-xs font-mono p-3 rounded border max-h-32 overflow-auto">
-          <Suspense>
-            <UserDetails />
-          </Suspense>
-        </pre>
-      </div>
-      <div>
-        <h2 className="font-bold text-2xl mb-4">Next steps</h2>
-        <FetchDataSteps />
-      </div>
+      )}
     </div>
   );
 }
